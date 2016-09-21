@@ -245,12 +245,12 @@ func newTypeEncoder(t reflect.Type, allowAddr bool) encoderFunc {
 }
 
 func invalidValueEncoder(e *encodeState, _ reflect.Value, _ bool) {
-	_, _ = e.WriteString("null")
+	_, _ = e.WriteString("{}")
 }
 
 func marshalerEncoder(e *encodeState, v reflect.Value, _ bool) {
 	if v.Kind() == reflect.Ptr && v.IsNil() {
-		_, _ = e.WriteString("null")
+		_, _ = e.WriteString("{}")
 		return
 	}
 
@@ -266,7 +266,7 @@ func marshalerEncoder(e *encodeState, v reflect.Value, _ bool) {
 func addrMarshalerEncoder(e *encodeState, v reflect.Value, _ bool) {
 	va := v.Addr()
 	if va.IsNil() {
-		_, _ = e.WriteString("null")
+		_, _ = e.WriteString("{}")
 		return
 	}
 	m := va.Interface().(Marshaler)
@@ -282,7 +282,7 @@ func addrMarshalerEncoder(e *encodeState, v reflect.Value, _ bool) {
 func textMarshalerEncoder(e *encodeState, v reflect.Value, _ bool) {
 	va := v.Addr()
 	if va.IsNil() {
-		_, _ = e.WriteString("null")
+		_, _ = e.WriteString("\"\"")
 		return
 	}
 	m := va.Interface().(encoding.TextMarshaler)
@@ -296,7 +296,7 @@ func textMarshalerEncoder(e *encodeState, v reflect.Value, _ bool) {
 
 func addrTextMarshalerEncoder(e *encodeState, v reflect.Value, _ bool) {
 	if v.Kind() == reflect.Ptr && v.IsNil() {
-		_, _ = e.WriteString("null")
+		_, _ = e.WriteString("\"\"")
 		return
 	}
 	m := v.Interface().(encoding.TextMarshaler)
@@ -395,7 +395,7 @@ func stringEncoder(e *encodeState, v reflect.Value, quoted bool) {
 
 func interfaceEncoder(e *encodeState, v reflect.Value, quoted bool) {
 	if v.IsNil() {
-		_, _ = e.WriteString("null")
+		_, _ = e.WriteString("{}")
 		return
 	}
 	e.reflectValue(v.Elem())
@@ -461,7 +461,7 @@ type mapEncoder struct {
 
 func (menc *mapEncoder) encode(e *encodeState, v reflect.Value, _ bool) {
 	if v.IsNil() {
-		_, _ = e.WriteString("null")
+		_, _ = e.WriteString("{}")
 		return
 	}
 	_, _ = e.WriteString("{\n")
@@ -486,7 +486,7 @@ func newMapEncoder(t reflect.Type) encoderFunc {
 
 func encodeByteSlice(e *encodeState, v reflect.Value, _ bool) {
 	if v.IsNil() {
-		_, _ = e.WriteString("null")
+		_, _ = e.WriteString("[]")
 		return
 	}
 	s := v.Bytes()
@@ -513,7 +513,7 @@ type sliceEncoder struct {
 
 func (se *sliceEncoder) encode(e *encodeState, v reflect.Value, _ bool) {
 	if v.IsNil() {
-		_, _ = e.WriteString("null")
+		_, _ = e.WriteString("[]")
 		return
 	}
 	se.arrayEnc(e, v, false)
@@ -599,7 +599,7 @@ type ptrEncoder struct {
 
 func (pe *ptrEncoder) encode(e *encodeState, v reflect.Value, quoted bool) {
 	if v.IsNil() {
-		_, _ = e.WriteString("null")
+		_, _ = e.WriteString("{}")
 		return
 	}
 	pe.elemEnc(e, v.Elem(), quoted)
