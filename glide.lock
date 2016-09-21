@@ -1,0 +1,6 @@
+hash: 3d24b1198be3adf876b5a93f5f4860aeca0a9e74bfa358c26ebcf6e0a04de43f
+updated: 2016-09-17T13:03:01.62272337-07:00
+imports:
+- name: github.com/hashicorp/hcl
+  version: ef8133da8cda503718a74741312bf50821e6de79
+testImports: []
