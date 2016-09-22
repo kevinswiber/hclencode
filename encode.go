@@ -413,12 +413,14 @@ type structEncoder struct {
 func (se *structEncoder) encode(e *encodeState, v reflect.Value, quoted bool) {
 	_, _ = e.WriteString("{")
 	for i, f := range se.fields {
-		if f.key {
-			e.keyCache = e.keyCache[:len(e.keyCache)-1]
+		fv := fieldByIndex(v, f.index)
+		if !fv.IsValid() || (f.omitEmpty && isEmptyValue(fv)) {
 			continue
 		}
-		fv := fieldByIndex(v, f.index)
-		if !fv.IsValid() || f.omitEmpty && isEmptyValue(fv) {
+		if f.key {
+			if len(e.keyCache) > 0 {
+				e.keyCache = e.keyCache[:len(e.keyCache)-1]
+			}
 			continue
 		}
 		if !f.mergeKey {
@@ -440,7 +442,7 @@ func (se *structEncoder) encode(e *encodeState, v reflect.Value, quoted bool) {
 			_ = e.WriteByte(',')
 		}
 	}
-	_, _ = e.WriteString("}")
+	_ = e.WriteByte('}')
 }
 
 func newStructEncoder(t reflect.Type) encoderFunc {
@@ -530,7 +532,10 @@ func newSliceEncoder(t reflect.Type) encoderFunc {
 
 type arrayEncoder struct {
 	key       string
+	value     string
 	skipEqual bool
+	quotedKey bool
+	pivot     bool
 	elemEnc   encoderFunc
 }
 
@@ -540,6 +545,7 @@ func (ae *arrayEncoder) encode(e *encodeState, v reflect.Value, _ bool) {
 	} else if len(e.keyCache) == 0 {
 		_ = e.WriteByte('{')
 	}
+
 	n := v.Len()
 	for i := 0; i < n; i++ {
 		if i > 0 {
@@ -550,14 +556,24 @@ func (ae *arrayEncoder) encode(e *encodeState, v reflect.Value, _ bool) {
 			if ft.Kind() == reflect.Ptr {
 				ft = ft.Elem()
 			}
-			e.keyCache = append(e.keyCache, ft.FieldByName(ae.key).String())
+			k := ft.FieldByName(ae.key).String()
+			if ae.quotedKey {
+				k = "\"" + k + "\""
+			}
+			e.keyCache = append(e.keyCache, k)
 			_, _ = e.WriteString(strings.Join(e.keyCache, " "))
 			if ae.skipEqual {
 				_ = e.WriteByte(' ')
 			} else {
 				_ = e.WriteByte('=')
 			}
-			ae.elemEnc(e, v.Index(i), false)
+			if ae.pivot && ae.value != "" {
+				elemEnc := typeEncoder(ft.FieldByName(ae.value).Type())
+				elemEnc(e, ft.FieldByName(ae.value), false)
+				e.keyCache = e.keyCache[:len(e.keyCache)-1]
+			} else {
+				ae.elemEnc(e, v.Index(i), false)
+			}
 		} else {
 			ae.elemEnc(e, v.Index(i), false)
 		}
@@ -570,9 +586,10 @@ func (ae *arrayEncoder) encode(e *encodeState, v reflect.Value, _ bool) {
 }
 
 func newArrayEncoder(t reflect.Type) encoderFunc {
-	var key string
-	var skipEqual bool
+	var key, value string
+	var skipEqual, pivot, quotedKey bool
 	var fields []field
+	elemEnc := typeEncoder(t.Elem())
 
 	if t.Elem().Kind() == reflect.Ptr {
 		fields = cachedTypeFields(t.Elem().Elem())
@@ -584,11 +601,30 @@ func newArrayEncoder(t reflect.Type) encoderFunc {
 		if f.key {
 			key = f.originalName
 			skipEqual = f.skipEqual
+			pivot = f.pivot
+			quotedKey = f.quoted
 			break
 		}
 
 	}
-	enc := &arrayEncoder{key, skipEqual, typeEncoder(t.Elem())}
+
+	if pivot {
+		for _, f := range fields {
+			if f.value {
+				value = f.originalName
+				break
+			}
+		}
+	}
+
+	enc := &arrayEncoder{
+		key:       key,
+		value:     value,
+		skipEqual: skipEqual,
+		quotedKey: quotedKey,
+		pivot:     pivot,
+		elemEnc:   elemEnc,
+	}
 
 	return enc.encode
 }
@@ -806,7 +842,9 @@ type field struct {
 	typ       reflect.Type
 	omitEmpty bool
 	skipEqual bool
+	pivot     bool
 	key       bool
+	value     bool
 	mergeKey  bool
 	quoted    bool
 }
@@ -937,7 +975,9 @@ func typeFields(t reflect.Type) []field {
 						typ:          ft,
 						omitEmpty:    opts.Contains("omitempty"),
 						skipEqual:    opts.Contains("skipequal"),
+						pivot:        opts.Contains("pivot"),
 						key:          opts.Contains("key"),
+						value:        opts.Contains("value"),
 						mergeKey:     opts.Contains("mergekey"),
 						quoted:       quoted,
 					}))

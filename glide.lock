@@ -1,6 +1,17 @@
-hash: 3d24b1198be3adf876b5a93f5f4860aeca0a9e74bfa358c26ebcf6e0a04de43f
-updated: 2016-09-17T13:03:01.62272337-07:00
+hash: 95d7344714703d6bc5af512bb9b0fac905b5b93fa03c7835f638e46967444510
+updated: 2016-09-22T12:41:39.332040107-07:00
 imports:
 - name: github.com/hashicorp/hcl
   version: ef8133da8cda503718a74741312bf50821e6de79
+  subpackages:
+  - hcl/printer
+  - hcl/ast
+  - hcl/parser
+  - hcl/token
+  - hcl/scanner
+  - hcl/strconv
+- name: github.com/stretchr/testify
+  version: f390dcf405f7b83c997eac1b06768bb9f44dec18
+  subpackages:
+  - assert
 testImports: []
