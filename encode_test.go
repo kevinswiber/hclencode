@@ -106,7 +106,7 @@ pet {
 
 func TestNestedSkipEqualMergeKey(t *testing.T) {
 	type pet struct {
-		Name string `hcl:"name,key,skipequal"`
+		Name string `hcl:"name,key,skipequal,string"`
 		Age  int    `hcl:"age"`
 	}
 	person := struct {
@@ -127,7 +127,7 @@ age = 34
 
 is_customer = true
 
-pet Spot {
+pet "Spot" {
   age = 4
 }
 `
